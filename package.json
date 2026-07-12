@@ -1,0 +1,51 @@
+{
+  "name": "@tokelio/cli",
+  "version": "0.1.0",
+  "description": "Command-line tool for Tokelio agent wallets, payments, budgets, escrow — and connecting your CLI-managed agent identity directly to Claude Code / Claude Desktop via MCP.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "tokelio": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup && chmod +x dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "tokelio",
+    "toke",
+    "ai-agents",
+    "cli",
+    "payments",
+    "escrow",
+    "budget",
+    "mcp"
+  ],
+  "dependencies": {
+    "@tokelio/sdk": "file:../tokelio-sdk",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^22.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.9.0",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.5"
+  },
+  "packageManager": "pnpm@11.9.0"
+}
