@@ -6,8 +6,8 @@ import {
   parseAmount,
   payeeAllowlist,
   payeeDenylist,
-} from "@tokelio/sdk";
-import type { SpendingPolicy } from "@tokelio/sdk";
+} from "@tokelio-labs/sdk";
+import type { SpendingPolicy } from "@tokelio-labs/sdk";
 import { ensureTokelioHome, getLedgerPath } from "./config.js";
 import type { PolicyConfig } from "./policies.js";
 import { loadPolicyConfig } from "./policies.js";

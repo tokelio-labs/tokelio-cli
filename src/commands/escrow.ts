@@ -1,4 +1,4 @@
-import type { EscrowTask } from "@tokelio/sdk";
+import type { EscrowTask } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 

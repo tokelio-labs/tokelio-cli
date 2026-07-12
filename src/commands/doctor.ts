@@ -89,7 +89,7 @@ function checkNodeVersion(): DoctorCheck {
     return {
       name: "node version",
       status: "warning",
-      detail: `Running Node ${nodeVersion}; @tokelio/cli requires >= ${MIN_NODE_MAJOR}.`,
+      detail: `Running Node ${nodeVersion}; @tokelio-labs/cli requires >= ${MIN_NODE_MAJOR}.`,
     };
   }
   return { name: "node version", status: "ok", detail: `Running Node ${nodeVersion}.` };

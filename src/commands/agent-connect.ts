@@ -110,7 +110,7 @@ function claudeDesktopConfigPath(): string {
 function buildFragment(agentId: string): McpServerFragment {
   return {
     command: "npx",
-    args: ["-y", "@tokelio/mcp-server"],
+    args: ["-y", "@tokelio-labs/mcp-server"],
     env: {
       TOKELIO_LEDGER_PATH: getLedgerPath(),
       TOKELIO_AGENT_ID: agentId,

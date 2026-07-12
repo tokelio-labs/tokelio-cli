@@ -1,4 +1,4 @@
-import { formatAmount, parseAmount } from "@tokelio/sdk";
+import { formatAmount, parseAmount } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 

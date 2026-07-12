@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
-import type { TransferRecord } from "@tokelio/sdk";
-import { exportHistoryToCsv, exportHistoryToJson } from "@tokelio/sdk";
+import type { TransferRecord } from "@tokelio-labs/sdk";
+import { exportHistoryToCsv, exportHistoryToJson } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 

@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { Command } from "commander";
-import type { BudgetPeriod } from "@tokelio/sdk";
-import { formatAmount } from "@tokelio/sdk";
+import type { BudgetPeriod } from "@tokelio-labs/sdk";
+import { formatAmount } from "@tokelio-labs/sdk";
 import { walletCreate, walletList } from "./commands/wallet.js";
 import { faucet } from "./commands/faucet.js";
 import { balance } from "./commands/balance.js";

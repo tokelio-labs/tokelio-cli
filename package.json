@@ -1,5 +1,5 @@
 {
-  "name": "@tokelio/cli",
+  "name": "@tokelio-labs/cli",
   "version": "0.1.0",
   "description": "Command-line tool for Tokelio agent wallets, payments, budgets, escrow — and connecting your CLI-managed agent identity directly to Claude Code / Claude Desktop via MCP.",
   "license": "MIT",
@@ -32,7 +32,7 @@
     "mcp"
   ],
   "dependencies": {
-    "@tokelio/sdk": "file:../tokelio-sdk",
+    "@tokelio-labs/sdk": "file:../tokelio-sdk",
     "chalk": "^5.3.0",
     "commander": "^12.1.0"
   },

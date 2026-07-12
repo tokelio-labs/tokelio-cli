@@ -14,12 +14,12 @@ interface PackageJsonShape {
 
 /**
  * Walks upward from `startDir` looking for a `package.json` whose `name` is
- * `@tokelio/cli` — this package's own manifest — rather than assuming a
+ * `@tokelio-labs/cli` — this package's own manifest — rather than assuming a
  * fixed number of directory hops. That fixed-depth assumption would break
  * because this file's location relative to the repo root differs between
  * dev/test (`src/package-info.ts`, two levels down) and the bundled build
  * (`dist/index.js`, one level down), and would break again for an installed
- * npm package (`node_modules/@tokelio/cli/dist/index.js`, where the nearest
+ * npm package (`node_modules/@tokelio-labs/cli/dist/index.js`, where the nearest
  * `package.json` going up is already the right one).
  */
 function findOwnPackageJson(startDir: string): PackageInfo {
@@ -31,7 +31,7 @@ function findOwnPackageJson(startDir: string): PackageInfo {
     try {
       const raw = readFileSync(candidate, "utf8");
       const parsed = JSON.parse(raw) as PackageJsonShape;
-      if (parsed.name === "@tokelio/cli" && parsed.version !== undefined) {
+      if (parsed.name === "@tokelio-labs/cli" && parsed.version !== undefined) {
         return { name: parsed.name, version: parsed.version };
       }
     } catch {
@@ -45,7 +45,7 @@ function findOwnPackageJson(startDir: string): PackageInfo {
     dir = parent;
   }
 
-  throw new Error("Could not locate @tokelio/cli's own package.json to read its version.");
+  throw new Error("Could not locate @tokelio-labs/cli's own package.json to read its version.");
 }
 
 /**

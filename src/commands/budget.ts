@@ -1,5 +1,5 @@
-import type { BudgetPeriod, TokelioClient } from "@tokelio/sdk";
-import { formatAmount } from "@tokelio/sdk";
+import type { BudgetPeriod, TokelioClient } from "@tokelio-labs/sdk";
+import { formatAmount } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 import type { BudgetEntry } from "../budgets.js";

@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@tokelio/sdk':
+      '@tokelio-labs/sdk':
         specifier: file:../tokelio-sdk
         version: file:../tokelio-sdk
       chalk:
@@ -551,7 +551,7 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@tokelio/sdk@file:../tokelio-sdk':
+  '@tokelio-labs/sdk@file:../tokelio-sdk':
     resolution: {directory: ../tokelio-sdk, type: directory}
     engines: {node: '>=18'}
 
@@ -1601,7 +1601,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
 
-  '@tokelio/sdk@file:../tokelio-sdk': {}
+  '@tokelio-labs/sdk@file:../tokelio-sdk': {}
 
   '@types/estree@1.0.9': {}
 

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { BatchPaymentItem, TransferRecord } from "@tokelio/sdk";
+import type { BatchPaymentItem, TransferRecord } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 import { ensureBudgetHydrated } from "./budget.js";

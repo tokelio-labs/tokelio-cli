@@ -8,7 +8,7 @@ import {
   PolicyViolationError,
   TokelioError,
   formatAmount,
-} from "@tokelio/sdk";
+} from "@tokelio-labs/sdk";
 
 /**
  * Maps SDK errors (and anything else a command might throw) into a plain

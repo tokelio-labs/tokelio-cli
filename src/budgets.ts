@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { BudgetPeriod } from "@tokelio/sdk";
+import type { BudgetPeriod } from "@tokelio-labs/sdk";
 import { getBudgetsPath } from "./config.js";
 
 /** A locally-remembered budget configuration for one agent. */

@@ -1,7 +1,7 @@
-# @tokelio/cli
+# @tokelio-labs/cli
 
 Command-line tool for Tokelio agent wallets, payments, budgets, and escrow —
-built on top of [`@tokelio/sdk`](../tokelio-sdk). It also wires your
+built on top of [`@tokelio-labs/sdk`](../tokelio-sdk). It also wires your
 CLI-managed agent identity directly into Claude Code / Claude Desktop via
 [MCP](https://modelcontextprotocol.io), so an AI agent can transact using the
 same local wallet you just funded from the terminal.
@@ -12,13 +12,13 @@ budgets, and escrow for machine-to-machine payments.
 ## Install
 
 ```bash
-pnpm add -g @tokelio/cli
+pnpm add -g @tokelio-labs/cli
 ```
 
 Or run without installing:
 
 ```bash
-npx @tokelio/cli <command>
+npx @tokelio-labs/cli <command>
 ```
 
 ## Local state
@@ -174,7 +174,7 @@ $ tokelio doctor
 
 `tokelio agent connect` is the CLI's headline feature: it wires the wallet
 and ledger you've been managing from the command line directly into an
-MCP-capable AI client, via `@tokelio/mcp-server`. Once connected, the client
+MCP-capable AI client, via `@tokelio-labs/mcp-server`. Once connected, the client
 can check balances, make payments, and manage escrow **using the exact same
 local state** — fund an agent with `tokelio faucet`, then let the agent spend
 it, all backed by the same `~/.tokelio/ledger.json`.
@@ -211,7 +211,7 @@ Resulting `.mcp.json`:
   "mcpServers": {
     "tokelio": {
       "command": "npx",
-      "args": ["-y", "@tokelio/mcp-server"],
+      "args": ["-y", "@tokelio-labs/mcp-server"],
       "env": {
         "TOKELIO_LEDGER_PATH": "/home/you/.tokelio/ledger.json",
         "TOKELIO_AGENT_ID": "my-agent"
@@ -234,7 +234,7 @@ Paste the following into your Claude Desktop config (mcpServers) for agent my-ag
   "mcpServers": {
     "tokelio": {
       "command": "npx",
-      "args": ["-y", "@tokelio/mcp-server"],
+      "args": ["-y", "@tokelio-labs/mcp-server"],
       "env": {
         "TOKELIO_LEDGER_PATH": "/home/you/.tokelio/ledger.json",
         "TOKELIO_AGENT_ID": "my-agent"
@@ -262,7 +262,7 @@ confirm the wiring worked end to end.
 
 ## Known limitations
 
-- **Budget and escrow state only live in memory inside `@tokelio/sdk`**
+- **Budget and escrow state only live in memory inside `@tokelio-labs/sdk`**
   (see the SDK's own docs — persistent budget/escrow storage is on its
   roadmap). Every `tokelio` command is its own OS process, so:
   - `tokelio budget set` persists the *configured limit and period* to

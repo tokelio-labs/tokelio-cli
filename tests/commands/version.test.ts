@@ -7,7 +7,7 @@ import { version } from "../../src/commands/version.js";
 describe("version", () => {
   it("reads name/version from this package's own package.json, not a hardcoded string", async () => {
     const result = version();
-    expect(result.name).toBe("@tokelio/cli");
+    expect(result.name).toBe("@tokelio-labs/cli");
 
     const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json");
     const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as { version: string };

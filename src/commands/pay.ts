@@ -1,5 +1,5 @@
-import type { TransferRecord } from "@tokelio/sdk";
-import { formatAmount } from "@tokelio/sdk";
+import type { TransferRecord } from "@tokelio-labs/sdk";
+import { formatAmount } from "@tokelio-labs/sdk";
 import { getClient } from "../client.js";
 import { toCleanError } from "../errors.js";
 import { ensureBudgetHydrated } from "./budget.js";

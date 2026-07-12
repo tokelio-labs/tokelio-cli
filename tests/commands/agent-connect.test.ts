@@ -38,7 +38,7 @@ describe("agent connect", () => {
     };
 
     expect(parsed.mcpServers.tokelio.command).toBe("npx");
-    expect(parsed.mcpServers.tokelio.args).toEqual(["-y", "@tokelio/mcp-server"]);
+    expect(parsed.mcpServers.tokelio.args).toEqual(["-y", "@tokelio-labs/mcp-server"]);
     expect(parsed.mcpServers.tokelio.env["TOKELIO_AGENT_ID"]).toBe("agent-a");
     expect(parsed.mcpServers.tokelio.env["TOKELIO_LEDGER_PATH"]).toBe(getLedgerPath());
   });
