@@ -24,13 +24,27 @@ npx @tokelio/cli <command>
 ## Local state
 
 Everything the CLI tracks lives under `~/.tokelio` by default (wallets,
-ledger balances/transfers, budget config). Override the location with the
-`TOKELIO_HOME` environment variable — handy for sandboxing, CI, or running
-multiple isolated "profiles" side by side:
+ledger balances/transfers, budget config, spending policy config). Override
+the location with the `TOKELIO_HOME` environment variable — handy for
+sandboxing, CI, or running multiple isolated "profiles" side by side:
 
 ```bash
 TOKELIO_HOME=/path/to/profile tokelio wallet create my-agent
 ```
+
+## Scripting with `--json`
+
+Pass `--json` (before the subcommand) on any command to get machine-readable
+JSON on stdout instead of the formatted/colored text — handy for piping into
+`jq` or driving the CLI from another script:
+
+```bash
+$ tokelio --json balance my-agent
+{"agentId":"my-agent","balance":"100"}
+```
+
+On failure, `--json` mode prints `{"error": "..."}` instead of a red
+`Error: ...` line; the exit code is still non-zero either way.
 
 ## Quickstart
 
@@ -71,9 +85,90 @@ Paid 5 TOKE from my-agent to some-service. Transfer id: xfer_...
 | `tokelio escrow refund <taskId>` | Refund a pending escrow task's funds to its payer | `tokelio escrow refund <taskId>` |
 | `tokelio escrow status <taskId>` | Show an escrow task's current status | `tokelio escrow status <taskId>` |
 | `tokelio agent connect [--agent-id <id>] [--target claude-code\|claude-desktop] [--write]` | Wire an agent identity into an MCP-capable client | `tokelio agent connect --agent-id my-agent` |
+| `tokelio agent disconnect [--target claude-code]` | Remove the Tokelio MCP server entry from `./.mcp.json` | `tokelio agent disconnect` |
+| `tokelio history <agentId> [--format json\|csv] [--output <file>]` | Show an agent's transfer history, exported as JSON or CSV | `tokelio history my-agent --format csv --output history.csv` |
+| `tokelio batch-pay --from <agentId> --file <path.csv\|path.json>` | Pay multiple recipients from a CSV or JSON file | `tokelio batch-pay --from my-agent --file payouts.csv` |
+| `tokelio policy set-max-transaction --limit <n>` | Set (or replace) the max-transaction-amount spending policy | `tokelio policy set-max-transaction --limit 50` |
+| `tokelio policy allow <agentId...>` | Set (or replace) the payee allowlist | `tokelio policy allow service-a service-b` |
+| `tokelio policy deny <agentId...>` | Set (or replace) the payee denylist | `tokelio policy deny sketchy-agent` |
+| `tokelio policy show` | Show currently configured spending policies | `tokelio policy show` |
+| `tokelio policy clear` | Clear all configured spending policies | `tokelio policy clear` |
+| `tokelio doctor` | Run diagnostics on the local Tokelio CLI state | `tokelio doctor` |
+| `tokelio version` | Print this package's own version | `tokelio version` |
 
 Every command exits non-zero and prints a red `Error: ...` message on
-failure, so it's safe to use in scripts (`tokelio pay ... || handle_failure`).
+failure (or `{"error": ...}` in `--json` mode), so it's safe to use in
+scripts (`tokelio pay ... || handle_failure`).
+
+## Batch payments
+
+`tokelio batch-pay` reads a list of `{to, amount, memo?}` payments from a
+file and pays each one from a single agent, via the same budget/policy/event
+pipeline as `tokelio pay`. One payment failing (insufficient balance, budget
+exceeded, a spending policy violation, ...) never aborts the rest of the
+batch — every failure is collected and reported alongside the successes,
+never thrown.
+
+JSON input is an array of objects:
+
+```json
+[
+  { "to": "service-a", "amount": "10", "memo": "invoice #1" },
+  { "to": "service-b", "amount": "25" }
+]
+```
+
+CSV input has a `to,amount,memo` header row (memo is optional and may be
+quoted if it contains a comma):
+
+```csv
+to,amount,memo
+service-a,10,"invoice #1, monthly"
+service-b,25
+```
+
+```bash
+$ tokelio batch-pay --from my-agent --file payouts.csv
+Batch pay from my-agent: 2 succeeded, 0 failed.
+```
+
+## Spending policies
+
+`tokelio policy` configures the SDK's `PolicyEngine`, enforced ahead of
+budget checks on every `pay`/`batch-pay`. Like budgets, the *configured*
+policy is persisted to `~/.tokelio/policies.json` and re-applied to a fresh
+`PolicyEngine` on every CLI invocation, since the SDK's own `PolicyEngine`
+only lives in memory for the lifetime of one `TokelioClient`. Unlike
+budgets, policy config is process-wide, not per-agent — there's one
+max-transaction-amount cap and one allowlist/denylist active at a time.
+
+```bash
+$ tokelio policy set-max-transaction --limit 50
+Max transaction amount policy set: 50 TOKE
+
+$ tokelio pay --from my-agent --to some-service --amount 100
+Error: Policy violation (maxTransactionAmount): amount 100000000000000000000 exceeds the maximum transaction amount of 50000000000000000000
+```
+
+## Diagnostics
+
+`tokelio doctor` checks the local CLI environment without touching the SDK:
+it ensures `TOKELIO_HOME` exists and is writable (creating it if missing,
+same as every other command), checks each local state file
+(`wallets.json`, `budgets.json`, `policies.json`, `ledger.json`) for
+existence and JSON validity — a malformed file is reported as a finding,
+never a crash — and checks the running Node version against the minimum
+supported version. Exits non-zero only if a check comes back `error`.
+
+```bash
+$ tokelio doctor
+[OK] TOKELIO_HOME: /home/you/.tokelio exists and is writable.
+[OK] wallets.json: /home/you/.tokelio/wallets.json exists and is valid JSON.
+[OK] budgets.json: /home/you/.tokelio/budgets.json is missing (not created yet).
+[OK] policies.json: /home/you/.tokelio/policies.json is missing (not created yet).
+[OK] ledger.json: /home/you/.tokelio/ledger.json exists and is valid JSON.
+[OK] node version: Running Node 22.23.1.
+```
 
 ## Connect your agent to Claude Code / Claude Desktop
 

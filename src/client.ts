@@ -1,5 +1,16 @@
-import { FileLedgerAdapter, TokelioClient } from "@tokelio/sdk";
+import {
+  FileLedgerAdapter,
+  PolicyEngine,
+  TokelioClient,
+  maxTransactionAmount,
+  parseAmount,
+  payeeAllowlist,
+  payeeDenylist,
+} from "@tokelio/sdk";
+import type { SpendingPolicy } from "@tokelio/sdk";
 import { ensureTokelioHome, getLedgerPath } from "./config.js";
+import type { PolicyConfig } from "./policies.js";
+import { loadPolicyConfig } from "./policies.js";
 
 // Memoized per resolved ledger path (rather than a bare singleton) so that
 // switching `TOKELIO_HOME` — as every test does, via a fresh `mkdtemp` dir
@@ -17,16 +28,54 @@ let cachedClient: TokelioClient | undefined;
 let cachedLedgerPath: string | undefined;
 
 /**
+ * Builds a `PolicyEngine` from the locally-persisted policy config (see
+ * `src/policies.ts`), or `undefined` if nothing is configured. This is the
+ * same hydration idea `src/commands/budget.ts` uses for budgets — the SDK's
+ * `PolicyEngine` is in-memory-only, so the CLI re-applies its own persisted
+ * config every time a fresh `TokelioClient` is built, which is what makes
+ * `policy set-max-transaction`/`policy allow`/`policy deny` survive across
+ * separate CLI invocations (each `tokelio` command is its own process).
+ */
+function buildPolicyEngine(config: PolicyConfig): PolicyEngine | undefined {
+  const policies: SpendingPolicy[] = [];
+
+  if (config.maxTransactionAmount !== undefined) {
+    policies.push(maxTransactionAmount(parseAmount(config.maxTransactionAmount)));
+  }
+  if (config.payeeAllowlist !== undefined) {
+    policies.push(payeeAllowlist(config.payeeAllowlist));
+  }
+  if (config.payeeDenylist !== undefined) {
+    policies.push(payeeDenylist(config.payeeDenylist));
+  }
+
+  return policies.length > 0 ? new PolicyEngine(policies) : undefined;
+}
+
+/**
  * Returns the process-wide `TokelioClient`, creating it (and the Tokelio
  * home directory) on first use. Backed by a `FileLedgerAdapter` pointed at
- * `getLedgerPath()`.
+ * `getLedgerPath()`, and a `PolicyEngine` hydrated from any persisted
+ * `policy set-max-transaction`/`policy allow`/`policy deny` config.
+ *
+ * Because the client (and the `PolicyEngine` baked into it) is memoized for
+ * the lifetime of this cache, a policy change made mid-process (as in
+ * tests, which run many commands in one process) is only picked up by
+ * wallets created *after* the next `resetClientCache()` — exactly like
+ * budgets, real CLI invocations never need to worry about this since every
+ * `tokelio` command is its own fresh process.
  */
 export async function getClient(): Promise<TokelioClient> {
   await ensureTokelioHome();
   const ledgerPath = getLedgerPath();
 
   if (!cachedClient || cachedLedgerPath !== ledgerPath) {
-    cachedClient = new TokelioClient({ adapter: new FileLedgerAdapter(ledgerPath) });
+    const policyConfig = await loadPolicyConfig();
+    const policyEngine = buildPolicyEngine(policyConfig);
+    cachedClient = new TokelioClient({
+      adapter: new FileLedgerAdapter(ledgerPath),
+      ...(policyEngine !== undefined ? { policyEngine } : {}),
+    });
     cachedLedgerPath = ledgerPath;
   }
 

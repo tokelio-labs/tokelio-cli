@@ -5,6 +5,7 @@ import {
   EscrowNotFoundError,
   InsufficientBalanceError,
   InvalidAmountError,
+  PolicyViolationError,
   TokelioError,
   formatAmount,
 } from "@tokelio/sdk";
@@ -37,6 +38,10 @@ export function toCleanError(err: unknown): Error {
 
   if (err instanceof InvalidAmountError) {
     return new Error(err.message);
+  }
+
+  if (err instanceof PolicyViolationError) {
+    return new Error(`Policy violation (${err.policyName}): ${err.reason}`);
   }
 
   if (err instanceof AgentNotFoundError) {

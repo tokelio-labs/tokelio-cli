@@ -39,6 +39,20 @@ export function getBudgetsPath(): string {
   return path.join(getTokelioHome(), "budgets.json");
 }
 
+/**
+ * Path to the JSON file tracking configured spending policies (max
+ * transaction amount, payee allowlist/denylist). Mirrors `budgets.json`'s
+ * reasoning: the SDK's `PolicyEngine` only lives in memory for the lifetime
+ * of a `TokelioClient`, so the CLI keeps its own record purely so `policy
+ * show` has something to display and `policy set-max-transaction`/`policy
+ * allow`/`policy deny` survive across separate CLI invocations. Unlike
+ * budgets, this is a single process-wide config rather than per-agent,
+ * matching how `PolicyEngine` itself is process/client-wide, not per-agent.
+ */
+export function getPoliciesPath(): string {
+  return path.join(getTokelioHome(), "policies.json");
+}
+
 /** Ensures the Tokelio home directory exists, creating it (and parents) if needed. */
 export async function ensureTokelioHome(): Promise<void> {
   await mkdir(getTokelioHome(), { recursive: true });

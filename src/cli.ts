@@ -10,18 +10,22 @@ import { budgetSet, budgetShow } from "./commands/budget.js";
 import { escrowCreate, escrowRefund, escrowRelease, escrowStatus } from "./commands/escrow.js";
 import type { AgentConnectResult, AgentConnectTarget } from "./commands/agent-connect.js";
 import { agentConnect } from "./commands/agent-connect.js";
-
-/** Runs `fn`, prints its result via `onSuccess`, and maps any thrown error to a red message + non-zero exit code. */
-async function runAction<T>(fn: () => Promise<T>, onSuccess: (result: T) => void): Promise<void> {
-  try {
-    const result = await fn();
-    onSuccess(result);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(chalk.red(`Error: ${message}`));
-    process.exitCode = 1;
-  }
-}
+import type { AgentDisconnectTarget } from "./commands/agent-disconnect.js";
+import { agentDisconnect } from "./commands/agent-disconnect.js";
+import type { HistoryFormat } from "./commands/history.js";
+import { historyShow } from "./commands/history.js";
+import { batchPay } from "./commands/batch-pay.js";
+import {
+  policyAllow,
+  policyClear,
+  policyDeny,
+  policySetMaxTransaction,
+  policyShow,
+} from "./commands/policy.js";
+import { doctor } from "./commands/doctor.js";
+import { version } from "./commands/version.js";
+import { getPackageInfo } from "./package-info.js";
+import { printError, printResult } from "./output.js";
 
 function printTable(rows: string[][]): void {
   if (rows.length === 0) {
@@ -44,7 +48,34 @@ export function buildProgram(): Command {
   program
     .name("tokelio")
     .description("Command-line tool for Tokelio agent wallets, payments, budgets, and escrow.")
-    .version("0.1.0");
+    .version(getPackageInfo().version)
+    .option("--json", "print machine-readable JSON instead of formatted text (for scripting)");
+
+  function jsonMode(): boolean {
+    return program.opts<{ json?: boolean }>().json === true;
+  }
+
+  /**
+   * Runs `fn`, prints its result via `renderHuman` (or as JSON, uniformly,
+   * when `--json` was passed — see `src/output.ts`), and maps any thrown
+   * error to a red message (or `{"error": ...}` in `--json` mode) + non-zero
+   * exit code. Returns the result on success (or `undefined` on failure) so
+   * a handful of callers (e.g. `doctor`) can layer extra exit-code logic on
+   * top without duplicating this try/catch.
+   */
+  async function runAction<T>(fn: () => Promise<T>, renderHuman: (result: T) => void): Promise<T | undefined> {
+    const opts = { json: jsonMode() };
+    try {
+      const result = await fn();
+      printResult(result, renderHuman, opts);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      printError(message, opts);
+      process.exitCode = 1;
+      return undefined;
+    }
+  }
 
   // ---- wallet ----------------------------------------------------------
   const walletCmd = program.command("wallet").description("Manage local agent wallets");
@@ -305,6 +336,194 @@ export function buildProgram(): Command {
           for (const step of result.nextSteps) {
             console.log(`  - ${step}`);
           }
+        },
+      );
+    });
+
+  agentCmd
+    .command("disconnect")
+    .option("--target <target>", "claude-code", "claude-code")
+    .description("Remove the Tokelio MCP server entry from ./.mcp.json (companion to 'agent connect')")
+    .action(async (options: { target: string }) => {
+      await runAction(
+        () => agentDisconnect({ target: options.target as AgentDisconnectTarget }),
+        (result) => {
+          if (result.removed) {
+            console.log(chalk.green(`Removed the tokelio MCP server entry from ${result.configPath}.`));
+          } else {
+            console.log(result.reason ?? "Nothing to remove.");
+          }
+        },
+      );
+    });
+
+  // ---- history -------------------------------------------------------------
+  program
+    .command("history")
+    .argument("<agentId>", "agent id to show transfer history for")
+    .option("--format <format>", "json|csv", "json")
+    .option("--output <file>", "write the exported history to this file instead of stdout")
+    .description("Show an agent's transfer history, exported as JSON or CSV")
+    .action(async (agentId: string, options: { format: string; output?: string }) => {
+      await runAction(
+        () =>
+          historyShow({
+            agentId,
+            format: options.format as HistoryFormat,
+            ...(options.output !== undefined ? { output: options.output } : {}),
+          }),
+        (result) => {
+          if (result.outputPath) {
+            console.log(
+              chalk.green(`Wrote ${result.records.length} record(s) to ${result.outputPath}`),
+            );
+            return;
+          }
+          console.log(result.formatted);
+        },
+      );
+    });
+
+  // ---- batch-pay -------------------------------------------------------------
+  program
+    .command("batch-pay")
+    .requiredOption("--from <agentId>", "paying agent id")
+    .requiredOption("--file <path>", "path to a .csv or .json file of {to, amount, memo?} items")
+    .description("Pay multiple recipients from a CSV or JSON file")
+    .action(async (options: { from: string; file: string }) => {
+      await runAction(
+        () => batchPay(options),
+        (result) => {
+          console.log(
+            chalk.green(
+              `Batch pay from ${result.from}: ${result.succeeded.length} succeeded, ${result.failed.length} failed.`,
+            ),
+          );
+          for (const failure of result.failed) {
+            console.log(chalk.red(`  - ${failure.item.to} (${String(failure.item.amount)}): ${failure.reason}`));
+          }
+        },
+      );
+    });
+
+  // ---- policy ------------------------------------------------------------
+  const policyCmd = program.command("policy").description("Manage process-wide spending policies");
+
+  policyCmd
+    .command("set-max-transaction")
+    .requiredOption("--limit <n>", "maximum amount allowed in a single transaction, in TOKE")
+    .description("Set (or replace) the max-transaction-amount spending policy")
+    .action(async (options: { limit: string }) => {
+      await runAction(
+        () => policySetMaxTransaction({ limit: options.limit }),
+        (result) => {
+          console.log(
+            chalk.green(`Max transaction amount policy set: ${result.config.maxTransactionAmount ?? "?"} TOKE`),
+          );
+        },
+      );
+    });
+
+  policyCmd
+    .command("allow")
+    .argument("<agentId...>", "agent ids to allow as payment recipients")
+    .description("Set (or replace) the payee allowlist")
+    .action(async (agentIds: string[]) => {
+      await runAction(
+        () => policyAllow({ agentIds }),
+        (result) => {
+          console.log(chalk.green(`Payee allowlist set: ${(result.config.payeeAllowlist ?? []).join(", ")}`));
+        },
+      );
+    });
+
+  policyCmd
+    .command("deny")
+    .argument("<agentId...>", "agent ids to deny as payment recipients")
+    .description("Set (or replace) the payee denylist")
+    .action(async (agentIds: string[]) => {
+      await runAction(
+        () => policyDeny({ agentIds }),
+        (result) => {
+          console.log(chalk.green(`Payee denylist set: ${(result.config.payeeDenylist ?? []).join(", ")}`));
+        },
+      );
+    });
+
+  policyCmd
+    .command("show")
+    .description("Show currently configured spending policies")
+    .action(async () => {
+      await runAction(
+        () => policyShow(),
+        (result) => {
+          const { config } = result;
+          if (
+            config.maxTransactionAmount === undefined &&
+            config.payeeAllowlist === undefined &&
+            config.payeeDenylist === undefined
+          ) {
+            console.log("No spending policies configured.");
+            return;
+          }
+          if (config.maxTransactionAmount !== undefined) {
+            console.log(`  max transaction amount: ${config.maxTransactionAmount} TOKE`);
+          }
+          if (config.payeeAllowlist !== undefined) {
+            console.log(`  payee allowlist: ${config.payeeAllowlist.join(", ")}`);
+          }
+          if (config.payeeDenylist !== undefined) {
+            console.log(`  payee denylist: ${config.payeeDenylist.join(", ")}`);
+          }
+        },
+      );
+    });
+
+  policyCmd
+    .command("clear")
+    .description("Clear all configured spending policies")
+    .action(async () => {
+      await runAction(
+        () => policyClear(),
+        () => {
+          console.log(chalk.green("Spending policies cleared."));
+        },
+      );
+    });
+
+  // ---- doctor --------------------------------------------------------------
+  program
+    .command("doctor")
+    .description("Run diagnostics on the local Tokelio CLI state")
+    .action(async () => {
+      const result = await runAction(
+        () => doctor(),
+        (r) => {
+          for (const check of r.checks) {
+            const marker =
+              check.status === "ok"
+                ? chalk.green("OK")
+                : check.status === "warning"
+                  ? chalk.yellow("WARN")
+                  : chalk.red("ERROR");
+            console.log(`[${marker}] ${check.name}: ${check.detail}`);
+          }
+        },
+      );
+      if (result && result.checks.some((c) => c.status === "error")) {
+        process.exitCode = 1;
+      }
+    });
+
+  // ---- version -------------------------------------------------------------
+  program
+    .command("version")
+    .description("Print this package's own version")
+    .action(async () => {
+      await runAction(
+        () => Promise.resolve(version()),
+        (result) => {
+          console.log(`${result.name} v${result.version}`);
         },
       );
     });
