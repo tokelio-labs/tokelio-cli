@@ -300,6 +300,16 @@ pnpm build
 Tests always point `TOKELIO_HOME` at a fresh temp directory per test and
 clean up afterward — they never touch your real `~/.tokelio`.
 
+
+## Links
+
+- Website: https://tokelio.com
+- Docs: https://docs.tokelio.com
+- dApp: https://dapp.tokelio.com
+- GitHub: https://github.com/tokelio-labs
+- X: https://x.com/tokeliocom
+- Telegram: https://t.me/tokeliocom
+
 ## License
 
 MIT © Tokelio Labs

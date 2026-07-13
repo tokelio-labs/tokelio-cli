@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Command-line tool for Tokelio agent wallets, payments, budgets, escrow — and connecting your CLI-managed agent identity directly to Claude Code / Claude Desktop via MCP.",
   "license": "MIT",
+  "homepage": "https://tokelio.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tokelio-labs/tokelio-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tokelio-labs/tokelio-cli/issues"
+  },
+  "author": "Tokelio Labs",
   "type": "module",
   "bin": {
     "tokelio": "dist/index.js"
