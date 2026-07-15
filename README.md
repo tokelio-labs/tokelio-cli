@@ -81,6 +81,8 @@ Paid 5 TOKE from my-agent to some-service. Transfer id: xfer_...
 | `tokelio budget set <agentId> --limit <n> --period <session\|hourly\|daily\|weekly>` | Set (or replace) an agent's spending budget | `tokelio budget set my-agent --limit 50 --period daily` |
 | `tokelio budget show <agentId>` | Show an agent's configured budget and remaining amount | `tokelio budget show my-agent` |
 | `tokelio simulate --budget <n> [--tasks <n>] [--compute-per-task <n>] [--data-per-task <n>] [--fee-rate <n>] [--steps]` | Forecast how far a TOKE budget stretches across agent tasks — no funds move | `tokelio simulate --budget 1000 --steps` |
+| `tokelio stake pools` | List the Tokelio staking vaults and their APRs | `tokelio stake pools` |
+| `tokelio stake project --principal <n> --days <n> [--apr <n>] [--pool <name>] [--compounding <none\|daily\|weekly\|monthly>]` | Project the yield on a staked TOKE position — no funds move | `tokelio stake project --principal 1000 --pool "Validator Vault" --days 90 --compounding daily` |
 | `tokelio escrow create --from <a> --to <b> --amount <n> --description <text>` | Lock funds in escrow for a task | `tokelio escrow create --from my-agent --to some-service --amount 10 --description "audit"` |
 | `tokelio escrow release <taskId>` | Release a pending escrow task's funds to its payee | `tokelio escrow release <taskId>` |
 | `tokelio escrow refund <taskId>` | Refund a pending escrow task's funds to its payer | `tokelio escrow refund <taskId>` |

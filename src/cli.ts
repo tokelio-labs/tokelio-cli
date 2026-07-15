@@ -8,6 +8,9 @@ import { balance } from "./commands/balance.js";
 import { pay } from "./commands/pay.js";
 import { budgetSet, budgetShow } from "./commands/budget.js";
 import { simulate } from "./commands/simulate.js";
+import { stakeProject } from "./commands/stake.js";
+import type { CompoundingFrequency } from "@tokelio-labs/sdk";
+import { STAKING_POOLS } from "@tokelio-labs/sdk";
 import { escrowCreate, escrowRefund, escrowRelease, escrowStatus } from "./commands/escrow.js";
 import type { AgentConnectResult, AgentConnectTarget } from "./commands/agent-connect.js";
 import { agentConnect } from "./commands/agent-connect.js";
@@ -302,6 +305,83 @@ export function buildProgram(): Command {
                 ]),
               ]);
             }
+          },
+        );
+      },
+    );
+
+  // ---- stake -------------------------------------------------------------
+  const VALID_COMPOUNDING: CompoundingFrequency[] = ["none", "daily", "weekly", "monthly"];
+  const stakeCmd = program.command("stake").description("Project staking rewards for the Tokelio vaults");
+
+  stakeCmd
+    .command("pools")
+    .description("List the available Tokelio staking vaults and their APRs")
+    .action(async () => {
+      await runAction(
+        () => Promise.resolve({ pools: STAKING_POOLS.map((p) => ({ ...p })) }),
+        ({ pools }) => {
+          printTable([
+            ["POOL", "APR", "LOCK", "BACKS"],
+            ...pools.map((p) => [p.name, `${p.apr.toString()}%`, p.lock, p.role]),
+          ]);
+        },
+      );
+    });
+
+  stakeCmd
+    .command("project")
+    .description("Project the yield on a staked TOKE position (no funds move)")
+    .requiredOption("--principal <n>", "amount of TOKE to stake")
+    .requiredOption("--days <n>", "how long the stake is held, in days")
+    .option("--apr <n>", "annual percentage rate as a percent, e.g. 18.4 (or use --pool)")
+    .option("--pool <name>", 'staking vault to use the APR from, e.g. "Validator Vault"')
+    .option("--compounding <freq>", "compounding schedule: none|daily|weekly|monthly (default none)")
+    .action(
+      async (options: {
+        principal: string;
+        days: string;
+        apr?: string;
+        pool?: string;
+        compounding?: string;
+      }) => {
+        await runAction(
+          () => {
+            if (
+              options.compounding !== undefined &&
+              !VALID_COMPOUNDING.includes(options.compounding as CompoundingFrequency)
+            ) {
+              throw new Error(
+                `Invalid --compounding "${options.compounding}" — must be one of: ${VALID_COMPOUNDING.join(", ")}`,
+              );
+            }
+            return Promise.resolve(
+              stakeProject({
+                principal: parseNumberOption(options.principal, "--principal"),
+                durationDays: parseNumberOption(options.days, "--days"),
+                ...(options.apr !== undefined ? { apr: parseNumberOption(options.apr, "--apr") } : {}),
+                ...(options.pool !== undefined ? { pool: options.pool } : {}),
+                ...(options.compounding !== undefined
+                  ? { compounding: options.compounding as CompoundingFrequency }
+                  : {}),
+              }),
+            );
+          },
+          (result) => {
+            const where = result.pool ? ` in ${result.pool}` : "";
+            console.log(
+              chalk.green(
+                `Staking ${result.principal} TOKE${where} at ${result.resolved.apr}% APR for ${result.resolved.durationDays} day(s):`,
+              ),
+            );
+            printTable([
+              ["METRIC", "VALUE"],
+              ["Compounding", result.resolved.compounding],
+              ["Total reward", `${result.totalReward} TOKE`],
+              ["Final balance", `${result.finalBalance} TOKE`],
+              ["Effective yield", `${(result.effectiveYield * 100).toFixed(2)}%`],
+              ["Avg reward / day", `${result.avgDailyReward} TOKE`],
+            ]);
           },
         );
       },
