@@ -7,6 +7,7 @@ import { faucet } from "./commands/faucet.js";
 import { balance } from "./commands/balance.js";
 import { pay } from "./commands/pay.js";
 import { budgetSet, budgetShow } from "./commands/budget.js";
+import { simulate } from "./commands/simulate.js";
 import { escrowCreate, escrowRefund, escrowRelease, escrowStatus } from "./commands/escrow.js";
 import type { AgentConnectResult, AgentConnectTarget } from "./commands/agent-connect.js";
 import { agentConnect } from "./commands/agent-connect.js";
@@ -220,6 +221,91 @@ export function buildProgram(): Command {
         },
       );
     });
+
+  // ---- simulate ----------------------------------------------------------
+  /** Parses a required numeric CLI option, rejecting non-numbers with a clean message. */
+  function parseNumberOption(raw: string, flag: string): number {
+    const value = Number(raw);
+    if (!Number.isFinite(value)) {
+      throw new Error(`Invalid value for ${flag}: "${raw}" is not a number`);
+    }
+    return value;
+  }
+
+  program
+    .command("simulate")
+    .description("Forecast how far a TOKE budget stretches across agent tasks (no funds move)")
+    .requiredOption("--budget <n>", "total TOKE budget to forecast")
+    .option("--tasks <n>", "number of tasks to plan for (default: as many as the budget allows)")
+    .option("--compute-per-task <n>", "TOKE spent on compute/inference per task (default 42)")
+    .option("--data-per-task <n>", "TOKE spent on premium data feeds per task (default 12)")
+    .option("--fee-rate <n>", "execution fee on (compute + data), as a fraction, e.g. 0.02 (default 0.02)")
+    .option("--steps", "also print the per-task ledger")
+    .action(
+      async (options: {
+        budget: string;
+        tasks?: string;
+        computePerTask?: string;
+        dataPerTask?: string;
+        feeRate?: string;
+        steps?: boolean;
+      }) => {
+        await runAction(
+          () =>
+            Promise.resolve(
+              simulate({
+                budget: parseNumberOption(options.budget, "--budget"),
+                ...(options.tasks !== undefined
+                  ? { tasks: parseNumberOption(options.tasks, "--tasks") }
+                  : {}),
+                ...(options.computePerTask !== undefined
+                  ? { computePerTask: parseNumberOption(options.computePerTask, "--compute-per-task") }
+                  : {}),
+                ...(options.dataPerTask !== undefined
+                  ? { dataPerTask: parseNumberOption(options.dataPerTask, "--data-per-task") }
+                  : {}),
+                ...(options.feeRate !== undefined
+                  ? { feeRate: parseNumberOption(options.feeRate, "--fee-rate") }
+                  : {}),
+              }),
+            ),
+          (result) => {
+            const headline = result.budgetExhausted
+              ? chalk.yellow(
+                  `Budget of ${result.resolved.budget} TOKE covers ${result.tasksCompleted} of ${result.resolved.tasks} requested task(s) — underfunded.`,
+                )
+              : chalk.green(
+                  `Budget of ${result.resolved.budget} TOKE covers ${result.tasksCompleted} task(s).`,
+                );
+            console.log(headline);
+            printTable([
+              ["METRIC", "VALUE"],
+              ["Tasks completed", String(result.tasksCompleted)],
+              ["Avg cost / task", `${result.avgCostPerTask} TOKE`],
+              ["Total spent", `${result.totalSpent} TOKE`],
+              ["Remaining", `${result.remaining} TOKE`],
+              ["Compute", `${result.breakdown.compute} TOKE`],
+              ["Data", `${result.breakdown.data} TOKE`],
+              ["Fees", `${result.breakdown.fees} TOKE`],
+            ]);
+            if (options.steps && result.steps.length > 0) {
+              console.log("");
+              printTable([
+                ["#", "COMPUTE", "DATA", "FEE", "TOTAL", "BALANCE"],
+                ...result.steps.map((s) => [
+                  String(s.index),
+                  String(s.compute),
+                  String(s.data),
+                  String(s.fee),
+                  String(s.total),
+                  String(s.balanceAfter),
+                ]),
+              ]);
+            }
+          },
+        );
+      },
+    );
 
   // ---- escrow ------------------------------------------------------------
   const escrowCmd = program.command("escrow").description("Manage escrowed payments between agents");
