@@ -8,18 +8,43 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # This package depends on @tokelio-labs/sdk via `file:../tokelio-sdk`, a
+    # sibling folder. CI checks each repo out in isolation, so we also check
+    # out and build the SDK next to it. Both repos live under the workspace:
+    #   <workspace>/main         -> this repo
+    #   <workspace>/tokelio-sdk  -> the SDK, so `../tokelio-sdk` resolves.
+    defaults:
+      run:
+        working-directory: main
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: main
+
+      - name: Checkout SDK (file:../tokelio-sdk dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: tokelio-labs/tokelio-sdk
+          path: tokelio-sdk
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 11
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: main/pnpm-lock.yaml
+
+      - name: Build SDK dependency
+        working-directory: tokelio-sdk
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
